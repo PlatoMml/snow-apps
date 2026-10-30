@@ -1796,6 +1796,14 @@ Files:
             <translation>Opacity</translation>
         </message>
         <message>
+            <source>Other windows could not be hidden.</source>
+            <translation>Other windows could not be hidden.</translation>
+        </message>
+        <message>
+            <source>Other windows hidden.</source>
+            <translation>Other windows hidden.</translation>
+        </message>
+        <message>
             <source>Pause</source>
             <translation>Pause</translation>
         </message>

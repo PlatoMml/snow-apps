@@ -3444,6 +3444,10 @@
             <translation>Quick selection</translation>
         </message>
         <message>
+            <source>Rapidly drag a pinned window back and forth to hide other pinned windows in the current group.</source>
+            <translation>Rapidly drag a pinned window back and forth to hide other pinned windows in the current group.</translation>
+        </message>
+        <message>
             <source>Real-time</source>
             <translation>Real-time</translation>
         </message>
@@ -4038,6 +4042,10 @@
         <message>
             <source>Shake Window</source>
             <translation>Shake Window</translation>
+        </message>
+        <message>
+            <source>Shake a window to hide other windows</source>
+            <translation>Shake a window to hide other windows</translation>
         </message>
         <message>
             <source>Shape tool</source>

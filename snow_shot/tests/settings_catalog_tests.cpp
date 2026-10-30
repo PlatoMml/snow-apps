@@ -30,6 +30,31 @@ void require(bool condition, const char* message) {
     }
 }
 
+void pinnedShakeSettingIsDiscoverable() {
+    const auto& registry = settings::builtInSettingsRegistry();
+    const auto* field =
+        registry.fieldForSwitch(settings::SettingsSwitchBinding::PinShakeWindowToHideOthers);
+    require(field && registry.validationErrors().isEmpty() &&
+                field->configurationKey ==
+                    QStringLiteral("pin_to_screen/shake_window_to_hide_others") &&
+                field->defaultValue.isBool() && field->defaultValue.toBool() &&
+                field->pageId == QStringLiteral("pinned-windows") &&
+                field->sectionId == QStringLiteral("pin-to-screen-settings") &&
+                field->reset == settings::SettingsSectionReset::PinToScreenBehavior &&
+                field->definition->title.translated() ==
+                    QStringLiteral("Shake a window to hide other windows"),
+            "shake-to-hide must default on in the pinned interaction settings");
+    const settings::SettingsSearchIndex search(registry);
+    for (const QString query : {QStringLiteral("shake"), QStringLiteral("back and forth")}) {
+        const auto results = search.search(query);
+        require(std::any_of(results.begin(), results.end(),
+                            [&](const auto& result) {
+                                return result.location.itemId == field->definition->id;
+                            }),
+                "shake setting label and description must be searchable");
+    }
+}
+
 void trayDarkIconSettingsHaveIndependentContracts() {
     const auto& registry = settings::builtInSettingsRegistry();
     const auto* icon = registry.fieldForRadio(settings::SettingsRadioBinding::TrayDarkIcon);
@@ -2156,7 +2181,7 @@ void builtInCatalogIsCompleteAndValid() {
         pinPage != nullptr && pinPage->sections.size() == 4 &&
             pinPage->sections.at(0).id == QStringLiteral("pin-to-screen-settings") &&
             pinPage->sections.at(0).title.translated() == QStringLiteral("Interaction") &&
-            pinPage->sections.at(0).items.size() == 13 &&
+            pinPage->sections.at(0).items.size() == 14 &&
             pinPage->sections.at(1).id == pinSection.id &&
             pinSection.title.translated() == QStringLiteral("Window interface") &&
             pinPage->sections.at(3).id == QStringLiteral("pin-to-screen-toolbar") &&
@@ -3842,6 +3867,10 @@ void memoryOptimizationPolicyCatalog() {
 
 int main(int argc, char** argv) {
     QCoreApplication application(argc, argv);
+    if (application.arguments().contains(QStringLiteral("--pinned-shake-only"))) {
+        pinnedShakeSettingIsDiscoverable();
+        return 0;
+    }
     if (application.arguments().contains(QStringLiteral("--pinned-batch-shortcuts-only"))) {
         const auto& catalog = settings::builtInSettingsRegistry().catalog();
         require(catalog.validationErrors().isEmpty(), "batch shortcuts preserve catalog validity");
@@ -3925,6 +3954,7 @@ int main(int argc, char** argv) {
 #endif
         return 0;
     }
+    pinnedShakeSettingIsDiscoverable();
     ocrHighlightingCatalog();
     memoryOptimizationPolicyCatalog();
     const auto adminCatalog = settings::buildBuiltInSettingsCatalog();

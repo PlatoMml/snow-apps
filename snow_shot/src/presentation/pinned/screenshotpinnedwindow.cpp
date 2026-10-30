@@ -27,6 +27,7 @@
 #include "snow_shot/presentation/automationrevision.h"
 #include "snow_shot/app/mcp/mcpstylepatch.h"
 #include "screenshotpinnedhidetotopcontroller.h"
+#include "screenshotpinnedshakegesture.h"
 #include "screenshotpinneddragexport.h"
 #include "screenshotpinnedclickthroughgeometry.h"
 #include "snow_shot/presentation/components/overlaycontrolbutton.h"
@@ -1314,6 +1315,9 @@ ScreenshotPinnedWindow::ScreenshotPinnedWindow(QWidget* parent)
                     if (key == QStringLiteral("pin_to_screen/show_window_buttons")) {
                         updateControlsVisibility();
                     }
+                    if (key == QStringLiteral("pin_to_screen/shake_window_to_hide_others")) {
+                        endWindowShake(true);
+                    }
                 });
     }
 }
@@ -1818,6 +1822,7 @@ bool ScreenshotPinnedWindow::prewarm(QScreen* screen) {
 
 ScreenshotPinnedWindow::~ScreenshotPinnedWindow() {
     m_destroying = true;
+    endWindowShake(true);
     if (m_scaleLabel)
         m_scaleLabel->dismiss();
     m_animationPlayback.reset();
@@ -1883,6 +1888,7 @@ void ScreenshotPinnedWindow::setGroupId(const QString& id) {
         normalized == m_groupId) {
         return;
     }
+    endWindowShake(true);
     m_groupId = normalized;
     if (!property("snowPinnedWindowGroupManagerMutation").toBool()) {
         schedulePersistence();
@@ -2286,6 +2292,8 @@ void ScreenshotPinnedWindow::changeEvent(QEvent* event) {
 }
 
 void ScreenshotPinnedWindow::retranslateUi() {
+    if (m_shakeMessage && m_shakeMessage->isOpen())
+        showShakeMessage(false);
     if (m_closeConfirmation != nullptr) {
         m_closeConfirmation->setWindowTitle(tr("Close pinned window"));
         m_closeConfirmation->setText(tr("Close this pinned window?"));
@@ -2431,6 +2439,9 @@ bool ScreenshotPinnedWindow::present(const Config& requestedConfig,
     m_airDropService = config.airDropService;
     cancelCloudUpload();
     ++m_presentationGeneration;
+    endWindowShake(true);
+    if (m_shakeMessage)
+        m_shakeMessage->close();
     m_deferredPresentationSetupScheduled = false;
     m_recognitionTargetReady = false;
     m_firstContentFramePublished = false;
@@ -2511,6 +2522,7 @@ bool ScreenshotPinnedWindow::present(const Config& requestedConfig,
     m_persistenceHider = config.persistenceHider;
     m_showAllWindowsRequested = config.showAllWindowsRequested;
     m_hideOtherWindowsRequested = config.hideOtherWindowsRequested;
+    m_shakeHideOtherWindowsRequested = config.shakeHideOtherWindowsRequested;
     m_creationSource = config.creationSource;
     m_sourceIdentity = config.sourceIdentity;
     m_sourcePinAvailable = true;
@@ -3063,6 +3075,7 @@ void ScreenshotPinnedWindow::contextMenuEvent(QContextMenuEvent* event) {
 }
 
 void ScreenshotPinnedWindow::closeEvent(QCloseEvent* event) {
+    endWindowShake(true);
     if (event->spontaneous() && !m_closing && !m_inactiveGroupClosing) {
         event->ignore();
         requestUserClose();
@@ -3175,6 +3188,11 @@ void ScreenshotPinnedWindow::resizeEvent(QResizeEvent* event) {
         m_editController->updatePlacement();
     }
     schedulePersistence();
+}
+
+void ScreenshotPinnedWindow::hideEvent(QHideEvent* event) {
+    endWindowShake(true);
+    QWidget::hideEvent(event);
 }
 
 void ScreenshotPinnedWindow::moveEvent(QMoveEvent* event) {
@@ -9209,6 +9227,38 @@ void ScreenshotPinnedWindow::hideOtherPinnedWindows() {
     raise();
 }
 
+ScreenshotPinnedWindow::HideOtherWindowsResult ScreenshotPinnedWindow::hideOtherWindowsForShake() {
+    if (m_shakeHideOtherWindowsRequested)
+        return m_shakeHideOtherWindowsRequested(m_persistenceId);
+    HideOtherWindowsResult result{true, false};
+    const auto windows = livePinnedWindows();
+    for (const auto& window : windows) {
+        if (!window || window == this || !window->m_presented || !window->sourcePinAvailable() ||
+            window->m_groupId != m_groupId)
+            continue;
+        const bool hidden = window->requestHide();
+        result.success &= hidden;
+        result.changed |= hidden;
+    }
+    if (!result.success)
+        showPinnedRecognitionMessage(this, tr("Other windows could not be hidden."), true);
+    return result;
+}
+
+void ScreenshotPinnedWindow::showShakeMessage(bool restart) {
+    if (restart)
+        m_shakeMessageDeadline.setRemainingTime(3000);
+    const qint64 remaining = m_shakeMessageDeadline.remainingTime();
+    if (remaining <= 0)
+        return;
+    adqt::widgets::AdMessage::Request message;
+    message.key = QStringLiteral("pinned-shake-hide-others");
+    message.content = tr("Other windows hidden.");
+    message.durationMs = static_cast<int>(remaining);
+    message.pauseOnHover = false;
+    m_shakeMessage = adqt::widgets::AdMessageService::success(std::move(message), this);
+}
+
 void ScreenshotPinnedWindow::closeOtherPinnedWindows() {
     const auto windows = livePinnedWindows();
     for (const QPointer<ScreenshotPinnedWindow>& window : windows) {
@@ -9233,6 +9283,7 @@ void ScreenshotPinnedWindow::closeAllPinnedWindows() {
 }
 
 void ScreenshotPinnedWindow::hideForClosing() {
+    endWindowShake(true);
     const bool firstClose = !m_closing;
     m_closing = true;
     if (m_scaleLabel)
@@ -9517,6 +9568,7 @@ bool ScreenshotPinnedWindow::moveCursorOnePixel(const QPoint& direction) {
         if (pointerScreen)
             physicalStep = std::max(1, qRound(pointerScreen->devicePixelRatio()));
     }
+    endWindowShake(true);
     auto result = m_physicalCursor->movePixels(direction, physicalStep);
     if (logical && result.commandApplied())
         result.position = physicalCursorPosition();
@@ -9580,6 +9632,7 @@ bool ScreenshotPinnedWindow::startWindowMove() {
         m_windowDragActive = true;
         setWindowDragCursor(Qt::ClosedHandCursor);
         m_platform->setSystemMoveActive(true);
+        beginWindowShake(QPointF(*nativeCursor), true);
         return true;
     }
     finishWindowMove();
@@ -9590,9 +9643,10 @@ bool ScreenshotPinnedWindow::startWindowMove() {
     return false;
 }
 
-void ScreenshotPinnedWindow::finishWindowMove() {
+void ScreenshotPinnedWindow::finishWindowMove(bool cancel) {
     if (m_interactionPlacement)
-        endControlledInteraction(false);
+        endControlledInteraction(cancel);
+    endWindowShake(cancel);
     m_platform->setSystemMoveActive(false);
     const bool wasActive = m_windowDragActive;
     m_windowDragActive = false;

@@ -1976,6 +1976,17 @@ SettingsItemDefinition pinShowWindowButtonsItem() {
         SettingsSwitchBinding::PinShowWindowButtons);
 }
 
+SettingsItemDefinition pinShakeWindowToHideOthersItem() {
+    return switchItem(
+        QStringLiteral("pin-to-screen.shake-window-to-hide-others"),
+        QT_TRANSLATE_NOOP("SettingsCatalog", "Shake a window to hide other windows"),
+        QT_TRANSLATE_NOOP("SettingsCatalog",
+                          "Rapidly drag a pinned window back and forth to hide other pinned "
+                          "windows in the current group."),
+        QStringLiteral("pin_to_screen/shake_window_to_hide_others"),
+        SettingsSwitchBinding::PinShakeWindowToHideOthers);
+}
+
 SettingsItemDefinition pinExitAnnotationModeBeforeClosingItem() {
     return switchItem(
         QStringLiteral("pin-to-screen.exit-annotation-mode-before-closing"),
@@ -3597,9 +3608,10 @@ QVector<SettingsPageDefinition> builtInPages() {
                  SettingsSectionReset::PinToScreenBehavior,
                  {pinZoomModeItem(), pinDoubleClickActionItem(), pinMiddleClickActionItem(),
                   pinAutomaticOcrItem(), pinTextSelectionItem(), pinAutoResizeItem(),
-                  pinDuplicateContentItem(), pinWheelOpacityStepItem(), pinWheelZoomStepItem(),
-                  pinShowWindowButtonsItem(), pinExitAnnotationModeBeforeClosingItem(),
-                  pinConfirmBeforeClosingWindowItem(), pinConfirmBeforeDestroyingWindowItem()},
+                  pinDuplicateContentItem(), pinShakeWindowToHideOthersItem(),
+                  pinWheelOpacityStepItem(), pinWheelZoomStepItem(), pinShowWindowButtonsItem(),
+                  pinExitAnnotationModeBeforeClosingItem(), pinConfirmBeforeClosingWindowItem(),
+                  pinConfirmBeforeDestroyingWindowItem()},
              },
              {
                  QStringLiteral("pin-to-screen"),
@@ -5287,6 +5299,9 @@ QStringList SettingsCatalog::validationErrors() const {
                         break;
                     case SettingsSwitchBinding::PinShowWindowButtons:
                         expectedKey = QStringLiteral("pin_to_screen/show_window_buttons");
+                        break;
+                    case SettingsSwitchBinding::PinShakeWindowToHideOthers:
+                        expectedKey = QStringLiteral("pin_to_screen/shake_window_to_hide_others");
                         break;
                     case SettingsSwitchBinding::PinShowBorderByDefault:
                         expectedKey = QStringLiteral("pin_to_screen/show_border_by_default");
