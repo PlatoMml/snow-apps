@@ -27027,6 +27027,11 @@ void pinnedAnimatedImages(bool transformsOnly = false) {
 }
 
 #include "pinned_color_swatch_window_tests.h"
+#include "screenshot_live_pinned_window_tests.h"
+#include "screenshot_live_pinned_window_native_tests.h"
+#ifdef SNOW_SHOT_LIVE_WINDOW_BENCHMARK
+#include "screenshot_live_window_performance_benchmark.h"
+#endif
 #include "pinned_text_type_tests.h"
 #include "pinned_shake_window_tests.h"
 
@@ -27050,6 +27055,16 @@ int main(int argc, char* argv[]) {
         // without this, lazily initialized storage lands in the developer's
         // real AppData (see IsolatedPinnedStorage).
         IsolatedPinnedStorage processStorage;
+#ifdef SNOW_SHOT_LIVE_WINDOW_BENCHMARK
+        if (app.arguments().contains(QStringLiteral("--live-window-performance-only"))) {
+            live_pinned_benchmark::run();
+            return 0;
+        }
+#endif
+        if (app.arguments().contains(QStringLiteral("--live-window-pin-only"))) {
+            pinnedLiveWindowTests();
+            return 0;
+        }
         if (app.arguments().contains(QStringLiteral("--shake-sampling-performance-only"))) {
             pinnedShakeSamplingBenchmark();
             return 0;
@@ -27065,6 +27080,10 @@ int main(int argc, char* argv[]) {
         }
 #endif
 #ifdef Q_OS_WIN
+        if (app.arguments().contains(QStringLiteral("--live-window-native-shell-only"))) {
+            live_pinned_native_tests::run();
+            return 0;
+        }
         if (app.arguments().contains(QStringLiteral("--native-capture-release-only"))) {
             pinnedNativeCaptureReleaseEndsGeometry();
             return 0;

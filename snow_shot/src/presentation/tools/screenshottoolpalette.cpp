@@ -104,6 +104,7 @@ constexpr int kRecordingSettingsColumnGap = 16;
 constexpr int kRecordingSettingsColorPickerWidth = 154;
 [[maybe_unused]] constexpr const char* kScreenshotToolPaletteTranslations[] = {
     QT_TRANSLATE_NOOP("ScreenshotToolPalette", "Print"),
+    QT_TRANSLATE_NOOP("ScreenshotToolPalette", "Pin Window to Screen"),
     QT_TRANSLATE_NOOP("ScreenshotToolPalette", "Pen filter"),
     QT_TRANSLATE_NOOP("ScreenshotToolPalette", "Rectangle filter"),
     QT_TRANSLATE_NOOP("ScreenshotToolPalette", "Auto Filter"),
@@ -5186,7 +5187,7 @@ bool ScreenshotToolPalette::activateToolFromToolbar(Tool tool, bool toggleVisibl
         toolbar_settings::DrawingSettings().alwaysShowFirstToolbarGroupButton();
     const bool alreadyActive =
         !toggleVisibleButton || fixedGroupButton ? m_activeTool.has_value() && *m_activeTool == tool
-        : requestedButton != nullptr ? m_activeToolButton == requestedButton
+        : requestedButton != nullptr             ? m_activeToolButton == requestedButton
                                      : m_activeTool.has_value() && *m_activeTool == tool;
     const Tool requestedTool = alreadyActive && tool != Tool::Select ? Tool::Select : tool;
     activateDrawingTool(requestedTool);
@@ -5411,6 +5412,9 @@ ScreenshotToolPalette::actionToolSourceButton(const QString& itemId) const {
     if (itemId == QStringLiteral("pin-to-screen")) {
         return m_pinButton;
     }
+    if (itemId == QStringLiteral("pin-window-to-screen")) {
+        return m_pinWindowButton;
+    }
     if (itemId == QStringLiteral("text-recognition")) {
         return m_ocrButton;
     }
@@ -5515,6 +5519,14 @@ bool ScreenshotToolPalette::activateActionTool(const QString& itemId, bool toggl
         emit screenRecordRequested();
     } else if (itemId == QStringLiteral("pin-to-screen")) {
         emit pinRequested();
+    } else if (itemId == QStringLiteral("pin-window-to-screen")) {
+        // Native targeting runs before screenshot teardown; retire the popup
+        // surface first so it cannot become the selected source window.
+        for (const ActionToolGroup& group : std::as_const(m_actionToolGroups)) {
+            if (group.popover)
+                group.popover->hide();
+        }
+        emit pinWindowRequested();
     } else if (itemId == QStringLiteral("text-recognition")) {
         return activateToolFromToolbar(Tool::Ocr, toggleVisibleButton);
     } else if (itemId == QStringLiteral("text-translation")) {
@@ -6053,6 +6065,7 @@ void ScreenshotToolPalette::applyMainToolbarLayout(bool notify) {
         m_htmlButton,
         m_screenRecordButton,
         m_pinButton,
+        m_pinWindowButton,
         m_ocrButton,
         m_textTranslationButton,
         m_scrollingScreenshotButton,
@@ -6542,6 +6555,14 @@ bool ScreenshotToolPalette::addMainSecondaryButtons(const Options& options, QBox
         addButton(m_pinButton);
         connect(m_pinButton, &adqt::widgets::AdButton::clicked, this,
                 [this]() { activateActionTool(QStringLiteral("pin-to-screen")); });
+        if (snow_shot::app::editionActionToolAvailable(QStringLiteral("pin-window-to-screen"))) {
+            m_pinWindowButton =
+                addActionButton("Pin Window to Screen", custom_outlined_icons::PinWindowToScreen());
+            m_pinWindowButton->setObjectName(QStringLiteral("screenshotPinWindowToScreenButton"));
+            addButton(m_pinWindowButton);
+            connect(m_pinWindowButton, &adqt::widgets::AdButton::clicked, this,
+                    [this]() { activateActionTool(QStringLiteral("pin-window-to-screen")); });
+        }
     }
 
     if (options.showOcrTool) {

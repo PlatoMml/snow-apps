@@ -52,9 +52,9 @@ Qt::CursorShape resizeCursor(int handle) {
 
 void ScreenshotPinnedWindow::beginWindowShake(const QPointF& pointer, bool physical) {
     endWindowShake(true);
-    if (!snow_shot::storage::PinToScreenSettings().shakeWindowToHideOthers() || !m_presented ||
-        m_closing || !m_windowDragActive || m_systemSizingActive || m_selectionGeometryActive ||
-        !screen())
+    if (isLiveWindow() || !snow_shot::storage::PinToScreenSettings().shakeWindowToHideOthers() ||
+        !m_presented || m_closing || !m_windowDragActive || m_systemSizingActive ||
+        m_selectionGeometryActive || !screen())
         return;
     if (!m_shakeGesture)
         m_shakeGesture = std::make_unique<ScreenshotPinnedShakeGesture>();
@@ -129,6 +129,8 @@ void ScreenshotPinnedWindow::endWindowShake(bool cancel) {
 
 bool ScreenshotPinnedWindow::exportDragEnabledAt(const QPoint& position,
                                                  Qt::KeyboardModifiers modifiers) const {
+    if (isLiveWindow())
+        return false;
     return m_presented && !m_closing && !m_clickThroughActive && !m_geometryAnimating &&
            !m_interactionPlacement && !m_windowDragActive && !m_ocrMode &&
            !(m_hiddenTextSelection && modifiers.testFlag(Qt::AltModifier)) && m_canvas &&

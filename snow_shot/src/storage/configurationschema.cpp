@@ -77,6 +77,7 @@ const QStringList kActionToolbarItemIds = editionActionIds({
     QStringLiteral("convert-to-html"),
     QStringLiteral("record-screen"),
     QStringLiteral("pin-to-screen"),
+    QStringLiteral("pin-window-to-screen"),
     QStringLiteral("text-recognition"),
     QStringLiteral("text-translation"),
     QStringLiteral("scrolling-screenshot"),
@@ -132,7 +133,7 @@ QVector<QStringList> defaultActionToolbarPositions() {
          QStringLiteral("latex-recognition"), QStringLiteral("barcode-recognition"),
          QStringLiteral("table-recognition")},
         {QStringLiteral("record-screen")},
-        {QStringLiteral("pin-to-screen")},
+        {QStringLiteral("pin-window-to-screen"), QStringLiteral("pin-to-screen")},
         {QStringLiteral("text-recognition")},
         {QStringLiteral("text-translation")},
         {QStringLiteral("scrolling-screenshot")},
@@ -2481,6 +2482,23 @@ normalizeToolbarLayout(const QJsonValue& value, const QStringList& itemIds,
             hiddenSet.contains(QStringLiteral("save-as-file"))) {
             hidden.push_back(QStringLiteral("print"));
             hiddenSet.insert(QStringLiteral("print"));
+        }
+    }
+    if (known.contains(QStringLiteral("pin-window-to-screen")) &&
+        !positioned.contains(QStringLiteral("pin-window-to-screen")) &&
+        !hiddenSet.contains(QStringLiteral("pin-window-to-screen"))) {
+        for (QStringList& position : positions) {
+            const qsizetype pin = position.indexOf(QStringLiteral("pin-to-screen"));
+            if (pin >= 0) {
+                position.insert(pin, QStringLiteral("pin-window-to-screen"));
+                positioned.insert(QStringLiteral("pin-window-to-screen"));
+                break;
+            }
+        }
+        if (!positioned.contains(QStringLiteral("pin-window-to-screen")) &&
+            hiddenSet.contains(QStringLiteral("pin-to-screen"))) {
+            hidden.push_back(QStringLiteral("pin-window-to-screen"));
+            hiddenSet.insert(QStringLiteral("pin-window-to-screen"));
         }
     }
     if (known.contains(QStringLiteral("airdrop")) &&

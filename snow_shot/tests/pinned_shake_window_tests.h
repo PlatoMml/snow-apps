@@ -121,7 +121,7 @@ void callbackAndMessagePreserveDrag() {
 
 void pendingActionsRespectCancellationAndSettings() {
     IsolatedPinnedStorage isolated;
-    for (const QString reason :
+    for (const QString& reason :
          {QStringLiteral("release"), QStringLiteral("cancel"), QStringLiteral("disable"),
           QStringLiteral("disable-enable"), QStringLiteral("hide"), QStringLiteral("reuse"),
           QStringLiteral("group")}) {
@@ -302,7 +302,7 @@ void dpiChangesAndSharedGeometryCannotCompleteOldShakes() {
 
 void peerContentAndWindowModesSurviveHiding() {
     IsolatedPinnedStorage isolated;
-    for (const QString kind :
+    for (const QString& kind :
          {QStringLiteral("image"), QStringLiteral("text"), QStringLiteral("animation"),
           QStringLiteral("thumbnail"), QStringLiteral("hide-to-top")}) {
         ScreenshotPinnedWindow source;

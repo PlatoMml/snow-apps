@@ -41,6 +41,8 @@
 #include <functional>
 #include <vector>
 
+template <typename T> class QFutureWatcher;
+
 namespace adqt::widgets {
 class AdButton;
 class AdContextMenu;
@@ -54,6 +56,7 @@ class WindowShortcutManager;
 class PinnedWindowGroupManager;
 class PinnedWindowSelectionController;
 class PinnedWindowPlatform;
+class LiveWindowSource;
 } // namespace snow_shot::presentation
 namespace snow_shot::platform {
 class PhysicalCursor;
@@ -139,9 +142,14 @@ class ScreenshotPinnedWindow final : public QWidget {
         return m_createdUtc;
     }
     void shakeForAttention();
+    [[nodiscard]] bool isLiveWindow() const {
+        return m_liveSource != nullptr;
+    }
+    [[nodiscard]] bool liveFrameAvailable() const;
+    Q_INVOKABLE void closeLiveWindow();
     struct HideOtherWindowsResult {
         bool success = false;
-        // Includes hiding a live pin or canceling a peer's pending presentation/restore.
+        // Includes hiding a displayed pin or canceling a peer's pending presentation/restore.
         bool changed = false;
     };
     struct Config {
@@ -164,6 +172,7 @@ class ScreenshotPinnedWindow final : public QWidget {
         QSize initialWindowSize;
         QString mouseWheelZoomMode = QStringLiteral("mouse_position");
         ScreenshotImageSource imageSource;
+        std::shared_ptr<snow_shot::presentation::LiveWindowSource> liveSource;
         std::shared_ptr<const ScreenshotAnimationSource> animationSource;
         QImage initialPreparedAnimationFrame;
         QTransform initialPreparedAnimationTransform;
@@ -294,15 +303,30 @@ class ScreenshotPinnedWindow final : public QWidget {
     void showMainWindowRequested();
     void splitRequested(const ScreenshotPinnedImageSnapshot& snapshot);
     void imageEditingRequested(const QString& recordId);
+    void imageEditingSnapshotRequested(const snow_shot::presentation::ImageEditingSource& source);
     void closingForPersistence(const snow_shot::storage::PinnedWindowRecord& snapshot,
                                snow_shot::storage::PinnedWindowCloseIntent intent);
 
   private:
     friend class ScreenshotPinnedEditController;
     friend class ScreenshotPinnedWindowTestAccess;
+    friend class ScreenshotLivePinnedWindowTestAccess;
     friend class ScreenshotPinnedBatchSaveSession;
     friend class PinnedWindowWindowsEvents;
     bool m_destroying = false;
+    std::shared_ptr<snow_shot::presentation::LiveWindowSource> m_liveSource;
+    QLabel* m_liveStatusLabel = nullptr;
+    QImage m_livePendingFrame;
+    QFutureWatcher<QImage>* m_liveFrameWatcher = nullptr;
+    QImage m_liveProcessingOriginal;
+    quint64 m_liveProcessingGeneration = 0;
+    std::optional<QTransform> m_requestedLiveTransform;
+    int m_requestedLiveQuarterTurns = 0;
+    quint64 m_liveFrameGeneration = 0;
+    bool m_liveFrameProcessing = false;
+    bool m_livePresentationUpdatePending = false;
+    bool m_liveNativePresentation = false;
+    bool m_liveSnapshotPending = false;
     friend class snow_shot::presentation::PinnedWindowSelectionController;
 
     enum class GeometryMutation {
@@ -346,6 +370,24 @@ class ScreenshotPinnedWindow final : public QWidget {
     void reloadPinnedWindowShortcuts();
     void refreshMenuShortcutDisplays();
     void createContextMenu();
+    void resetContextMenuActions();
+    [[nodiscard]] bool liveCommandAllowed(const QString& command) const;
+    bool initializeLivePresentation(QString* error = nullptr);
+    void scheduleLivePresentation();
+    bool synchronizeLivePresentation(QString* error = nullptr);
+    void updateLiveState();
+    void queueLiveFrame(QImage frame);
+    void installLiveFrame(QImage original, QImage transformed);
+    [[nodiscard]] std::shared_ptr<ScreenshotExportArtifact>
+    liveViewportArtifact(bool applyWindowOpacity = true);
+    [[nodiscard]] ScreenshotExportSource liveExportSource(bool applyWindowOpacity = true);
+    void requestLiveSnapshot(std::function<void(QImage, QString)> completion,
+                             bool applyWindowOpacity = true);
+    void convertLiveToImage();
+    void splitLiveImage();
+    void editLiveImage();
+    void finishLiveConversion(QImage image);
+    void stopLiveSource();
     void executeImageCommand(const QString& id);
     void confirmDestroy();
     void rebuildGroupMenu();
@@ -455,6 +497,7 @@ class ScreenshotPinnedWindow final : public QWidget {
     void applyImageOperation(const QTransform& operation, int quarterTurnDelta = 0);
     void resetImageTransform();
     void applyImageTransform(const QTransform& transform, int quarterTurns);
+    bool commitImageTransformGeometry(const QTransform& transform, int quarterTurns);
     void commitPreparedAnimationTransform(const QTransform& transform, int quarterTurns,
                                           QImage original, QImage transformed, int frameIndex,
                                           quint64 token);
