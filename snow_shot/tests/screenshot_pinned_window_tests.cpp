@@ -27207,6 +27207,10 @@ int main(int argc, char* argv[]) {
         // without this, lazily initialized storage lands in the developer's
         // real AppData (see IsolatedPinnedStorage).
         IsolatedPinnedStorage processStorage;
+        if (app.arguments().contains(QStringLiteral("--live-window-crop-only"))) {
+            livePinnedCropTests();
+            return 0;
+        }
         if (app.arguments().contains(QStringLiteral("--crop-only"))) {
             pinnedCropTests();
             return 0;
@@ -27229,6 +27233,12 @@ int main(int argc, char* argv[]) {
             return 0;
         }
 #endif
+        if (app.arguments().contains(QStringLiteral("--live-window-status-only"))) {
+            live_pinned_tests::statusFitsConstrainedContent();
+            live_pinned_tests::statusAndCapabilityGates();
+            live_pinned_tests::statusLayoutFollowsContent();
+            return 0;
+        }
         if (app.arguments().contains(QStringLiteral("--live-window-pin-only"))) {
             pinnedLiveWindowTests();
             return 0;
@@ -27248,7 +27258,9 @@ int main(int argc, char* argv[]) {
         }
 #endif
 #ifdef Q_OS_WIN
-        if (app.arguments().contains(QStringLiteral("--live-window-native-shell-only"))) {
+        if (app.arguments().contains(QStringLiteral("--live-window-native-shell-only")) ||
+            app.arguments().contains(QStringLiteral("--live-window-hover-native-only")) ||
+            app.arguments().contains(QStringLiteral("--live-window-resize-native-only"))) {
             live_pinned_native_tests::run();
             return 0;
         }
