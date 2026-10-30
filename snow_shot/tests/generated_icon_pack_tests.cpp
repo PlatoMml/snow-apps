@@ -98,8 +98,8 @@ void everySnowShotEntryRenders() {
     const auto registered = icons::registerWith(renderer);
     require(registered.ok(), "Snow Shot pack registration should succeed");
     const adqt::icons::IconPack* staticPack = icons::pack().staticPack();
-    require(staticPack != nullptr && staticPack->entryCount == 212,
-            "Snow Shot pack should contain all 212 project-owned assets");
+    require(staticPack != nullptr && staticPack->entryCount == 213,
+            "Snow Shot pack should contain all 213 project-owned assets");
     require(adqt::icons::describeIcon(icons::outlined::PinWindowToScreen()).key.name ==
                 QStringLiteral("pin-window-to-screen"),
             "live window pinning should resolve to its project-owned icon");
@@ -109,6 +109,24 @@ void everySnowShotEntryRenders() {
     require(adqt::icons::describeIcon(icons::outlined::BracketAnnotation()).key.name ==
                 QStringLiteral("bracket-annotation"),
             "bracket annotation should resolve to its project-owned icon");
+    require(adqt::icons::describeIcon(icons::outlined::ApplyCrop()).key.name ==
+                QStringLiteral("apply-crop"),
+            "applying a crop should resolve to its project-owned icon");
+    require(adqt::icons::describeIcon(icons::outlined::WindowUnderCursorAlwaysOnTop()).key.name ==
+                QStringLiteral("window-under-cursor-always-on-top"),
+            "window always-on-top should resolve to its project-owned icon");
+    require(adqt::icons::describeIcon(icons::twotone::LiveWindowClosed()).key.name ==
+                QStringLiteral("live-window-closed"),
+            "closed live window status should resolve to its project-owned icon");
+    require(adqt::icons::describeIcon(icons::twotone::LiveWindowMinimized()).key.name ==
+                QStringLiteral("live-window-minimized"),
+            "minimized live window status should resolve to its project-owned icon");
+    require(adqt::icons::describeIcon(icons::twotone::LiveWindowUnavailable()).key.name ==
+                QStringLiteral("live-window-unavailable"),
+            "unavailable live window status should resolve to its project-owned icon");
+    require(adqt::icons::describeIcon(icons::twotone::ScreenshotFeature()).key.name ==
+                QStringLiteral("screenshot-feature"),
+            "screenshot feature should retain its project-owned icon after new icons are added");
     require(adqt::icons::describeIcon(icons::outlined::TextType()).key.name ==
                 QStringLiteral("text-type"),
             "recognition and translation switching should resolve to its project-owned icon");
