@@ -3391,6 +3391,11 @@ void ScreenshotPinnedWindow::paintEvent(QPaintEvent* event) {
     painter.fillRect(rect(), Qt::transparent);
     if (!m_liveNativePresentation)
         painter.fillRect(contentViewRect(), opaquePinnedBackground(this));
+    else {
+        // Native live content is behind the transparent shell; its canvas is hidden.
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        paintCropSelection(painter, this);
+    }
 }
 
 void ScreenshotPinnedWindow::setWindowSelected(bool selected) {
@@ -3426,6 +3431,10 @@ void ScreenshotPinnedWindow::createUi() {
     m_canvas = new ScreenshotPinnedCanvasWidget(
         m_runtime, this,
         [this]() {
+            if (m_cropSelectionOrigin && !m_liveNativePresentation) {
+                QPainter painter(m_canvas);
+                paintCropSelection(painter, m_canvas);
+            }
             acknowledgeAnimationPaint();
             handleFirstContentFramePainted();
         },
